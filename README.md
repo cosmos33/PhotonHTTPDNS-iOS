@@ -9,10 +9,12 @@
 添加source:
 source 'https://github.com/cosmos33/MMSpecs'
 
-pod 'PhotonHTTPDNS','~>1.0.0'
+pod 'PhotonHTTPDNS', '~>1.0.0'
 
 PhotonHTTPDNS依赖openssl，需要引入
-pod 'openssl-lib','~>1.0.1'。
+
+pod 'openssl-lib', '~>1.0.1'
+
 如果工程中已经有引入依赖openssl库，可先尝试使用已引入的，如编译或者运行时存在问题，在依赖使用 pod 'openssl-lib','~>1.0.1'。
 
 
