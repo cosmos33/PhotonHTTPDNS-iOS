@@ -2,34 +2,23 @@
 
 解决iOS客户端使用HTTPDNS时的痛点，完美处理了sni，web场景使用nsnsurlsession不能处理的问题。一键接入，全面体验方便高效的HTTPDNS带来的防劫持，调度以及网络访问性能的提升。
 
-# 限制
-1. 需要开启 webview 的 bridge，否则 webview 里的请求会出问题
-
-
-
-
 ## 导入HTTPDNS库
-进到 https://git.wemomo.com/module/MDDNS-iOS.git 仓库下，切到dev分支
-获取MDHTTPDNS.framework库，并引用到自己的项目中，如仓库中的MDHTTPDNSDemo所示
 
-![屏幕快照 20190508 下午3.51.41.png](/attach/5cd28aa45b018.png)
+### cocoapods依赖:（推荐使用）
+
+添加source:
+source 'https://github.com/cosmos33/MMSpecs'
+
+pod 'PhotonHTTPDNS', '~>1.0.0'
+
+PhotonHTTPDNS依赖openssl，需要引入
+
+pod 'openssl-lib', '~>1.0.1'
+
+如果工程中已经有引入依赖openssl库，可先尝试使用已引入的，如编译或者运行时存在问题，在依赖使用 pod 'openssl-lib','~>1.0.1'。
 
 
-## cocoapods依赖:（推荐使用）
-
-最新版本:3.0.1 字符相关的crash
-
-
-source 'https://github.com/CocoaPods/Specs.git'
-source 'https://git.wemomo.com/ios/Specs.git'
-source 'https://git.wemomo.com/base/Specs.git'
-pod 'PhotonHTTPDNS','~>3.0.0'
-
-此PhotonHTTPDNS会拉取以下依赖的基础库，如下：
-`libcurl.a`对应源：'https://git.wemomo.com/base/Specs.git'
-`libnghttp2.a`对应源：同上
-`openssl-lib`对应源：同上
-`PHCronet.framework`对应源：'https://git.wemomo.com/ios/Specs.git'
+在[Build Phases]->[Link Binary With Libraries]中添加libc++。
 
 ##  代码接入
 
@@ -43,13 +32,12 @@ MDDNSConfig.h
 @end
 
 MDDNSConfig.m
-@implementation PhotonHTTPDNSConfig
-// 申请得到的appid
+@implementation MDDNSConfig
+// appid
 - (NSString *)getAppid{
-    return @"c078bff4c2754152b1adc8325a09aa6c";
+    return @"2bd1a15c553de0a9df6dcede9af22962";
 }
 
-// 应用版本号
 - (NSString *)getAppVersion{
     return @"1438";
 }
@@ -58,7 +46,6 @@ MDDNSConfig.m
     return @"iOS";
 }
 
-// ua必填
 - (NSString *)getUseragent{
     return @"MomoChat/9.0 ios/1471 (iPhone 8; iOS 12.1.2; zh_CN; iPhone10,1; S1)";
 }
@@ -70,6 +57,23 @@ MDDNSConfig.m
 - (NSString *)getUserid{
     return @"12345";
 }
+
+// 获取当前的用户id
+- (double)getLng{
+    return 0.0f;
+}
+
+// 获取当前的用户id
+- (double)getLat{
+    return 32.43f;
+}
+
+// 指定预先解析的域名
+- (nonnull NSArray<NSString *> *)getPreResolveHosts {
+    return @[@"immomo.com"];
+}
+
+@end
 
 // 获取当前的用户id
 - (double)getLng{
@@ -130,7 +134,7 @@ MDDNSConfig.m
     request.timeoutInterval = 10;
     
     // 设置Hosts请求头
-    if ([usedIp isEqualToString:host]) {
+    if (![usedIp isEqualToString:host]) {
         [request setValue:host forHTTPHeaderField:@"Host"];
     }
     NSURLSessionDataTask * dataTask =  [session dataTaskWithRequest:request completionHandler:^(NSData * __nullable data, NSURLResponse * __nullable response, NSError * __nullable error) {
@@ -138,7 +142,7 @@ MDDNSConfig.m
             // 请求失败。告知httpdns
             [PhotonHTTPDNSClient requestFailedForDomain:host andFailedDomain:usedIp andFailedPort:0];
         }else{
-         // 请求成功。告知httpdns
+	     // 请求成功。告知httpdns
             [PhotonHTTPDNSClient requestSucceedForDomain:host andSucceedDomain:usedIp andSuccessedPort:0];
         }
         
@@ -169,7 +173,7 @@ MDDNSConfig.m
         [cls performSelector:sel withObject:@"http"];
         [cls performSelector:sel withObject:@"https"];
     }
-    
+	
 ```
 
 > 注:以上则为简单试的接入方式，接入方需要单独的处理SNI（单ip多证书）场景和webview场景存在的问题。
@@ -191,6 +195,17 @@ MDDNSConfig.m
 
 ```
 仅以上代码部分，不需再接入其他任何额外的代码
+
+
+
+
+
+
+
+
+
+
+ 
 
 
 
