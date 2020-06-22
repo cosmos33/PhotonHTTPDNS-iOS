@@ -1,0 +1,204 @@
+# 解决问题：
+
+解决iOS客户端使用HTTPDNS时的痛点，完美处理了sni，web场景使用nsnsurlsession不能处理的问题。一键接入，全面体验方便高效的HTTPDNS带来的防劫持，调度以及网络访问性能的提升。
+
+# 限制
+1. 需要开启 webview 的 bridge，否则 webview 里的请求会出问题
+
+
+
+
+## 导入HTTPDNS库
+进到 https://git.wemomo.com/module/MDDNS-iOS.git 仓库下，切到dev分支
+获取MDHTTPDNS.framework库，并引用到自己的项目中，如仓库中的MDHTTPDNSDemo所示
+
+![屏幕快照 20190508 下午3.51.41.png](/attach/5cd28aa45b018.png)
+
+
+## cocoapods依赖:（推荐使用）
+
+最新版本:3.0.1 字符相关的crash
+
+
+source 'https://github.com/CocoaPods/Specs.git'
+source 'https://git.wemomo.com/ios/Specs.git'
+source 'https://git.wemomo.com/base/Specs.git'
+pod 'PhotonHTTPDNS','~>3.0.0'
+
+此PhotonHTTPDNS会拉取以下依赖的基础库，如下：
+`libcurl.a`对应源：'https://git.wemomo.com/base/Specs.git'
+`libnghttp2.a`对应源：同上
+`openssl-lib`对应源：同上
+`PHCronet.framework`对应源：'https://git.wemomo.com/ios/Specs.git'
+
+##  代码接入
+
+### 1.初始化
+> 实现`MDDNSConfigProtocol`协议方法，配置好`MDDNSConfig`代码如下
+
+```
+MDDNSConfig.h
+@interface PhotonHTTPDNSConfig : NSObject<PhotonHTTPDNSConfigProtocol>
+
+@end
+
+MDDNSConfig.m
+@implementation PhotonHTTPDNSConfig
+// 申请得到的appid
+- (NSString *)getAppid{
+    return @"c078bff4c2754152b1adc8325a09aa6c";
+}
+
+// 应用版本号
+- (NSString *)getAppVersion{
+    return @"1438";
+}
+
+- (NSString *)getOsType{
+    return @"iOS";
+}
+
+// ua必填
+- (NSString *)getUseragent{
+    return @"MomoChat/9.0 ios/1471 (iPhone 8; iOS 12.1.2; zh_CN; iPhone10,1; S1)";
+}
+// 获取全局的域名配置，有则设置
+- (NSString *)getHttpDNSGlobalConfigs{
+    return @"";
+}
+// 获取当前的用户id
+- (NSString *)getUserid{
+    return @"12345";
+}
+
+// 获取当前的用户id
+- (double)getLng{
+    return 23.43f;
+}
+
+// 获取当前的用户id
+- (double)getLat{
+    return 32.43f;
+}
+@end
+
+```
+
+> 使用PhotonHTTPDNSConfig初始化SDK
+
+```
+ PhotonHTTPDNSConfig *config = [[PhotonHTTPDNSConfig alloc] init];
+ [PhotonHTTPDNSClient initHTTPDNSWithConfig:config];
+
+ // 打开底层log 日志，用于排查问题，默认是关闭
+#ifdef DEBUG
+[PhotonHTTPDNSClient shouldConsolLog:YES];
+#else
+[PhotonHTTPDNSClient shouldConsolLog:NO];
+
+
+```
+### 2.使用方式
+#### 2.1 直接式的使用方式
+>注: 此种使用方式需要接入方处理的事务比较多，比如(SNI场景和wkwebview)的接入，但是灵活性比较高
+
+* 在请求之前调用 `[PhotonHTTPDNSClient getIPbyHost:host]`获取host解析后得到的ip。
+
+* 请求成功调用 `[PhotonHTTPDNSClient requestSucceedForDomain:host andSucceedDomain:usedIp andSuccessedPort:0];
+        }`
+
+* 请求失败调用 `[PhotonHTTPDNSClient requestFailedForDomain:host andFailedDomain:usedIp andFailedPort:0]`
+
+示例代码如下:
+
+```
+
+    // 业务层最原始的请求
+    NSString *originUrl = _textfield.text;
+    // 通过HTTPDNS获取IP成功，进行URL替换和HOST头设置
+    NSURLComponents *com = [[NSURLComponents alloc] initWithString:originUrl];
+    NSString *host = com.host;
+    NSString *usedIp = [PhotonHTTPDNSClient getIPbyHost:host];
+    com.host = usedIp;
+    // 使用解析后的ip生成新的请求使用的url
+    NSURL *newURL = com.URL;
+    
+    // 模拟发起请求(业务层针对自己的请求模块)
+    NSURLSessionConfiguration * config = [NSURLSessionConfiguration defaultSessionConfiguration];
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:config delegate:nil delegateQueue:[NSOperationQueue mainQueue]];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:newURL];
+    request.timeoutInterval = 10;
+    
+    // 设置Hosts请求头
+    if ([usedIp isEqualToString:host]) {
+        [request setValue:host forHTTPHeaderField:@"Host"];
+    }
+    NSURLSessionDataTask * dataTask =  [session dataTaskWithRequest:request completionHandler:^(NSData * __nullable data, NSURLResponse * __nullable response, NSError * __nullable error) {
+        if (error) {
+            // 请求失败。告知httpdns
+            [PhotonHTTPDNSClient requestFailedForDomain:host andFailedDomain:usedIp andFailedPort:0];
+        }else{
+         // 请求成功。告知httpdns
+            [PhotonHTTPDNSClient requestSucceedForDomain:host andSucceedDomain:usedIp andSuccessedPort:0];
+        }
+        
+    }];
+    [dataTask resume];
+
+```
+
+> 直接调用httpdns模块获取ip的方式，业务成需要单独处理两种主要的场景:SNI（单ip多证书）场景和webview场景。
+
+* SNI（单IP多HTTPS证书）场景下，iOS上层网络库 NSURLConnection/NSURLSession 没有提供接口进行 SNI 字段 配置，因此需要 Socket 层级的底层网络库例如 CFNetwork（不支持HTTP2.0），来实现 IP 直连网络请求适配方案。处理的一般思路是通过自定义的NSURULProtocol拦截请求后通过CFNetwork底层网络进行转发,处理过程中需要开发者处理数据的收发、重定向、解码、缓存等问题（CFNetwork是非常底层的网络实现）。也可使用libcurl或者Cronet
+
+* webview场景下。可以使用NSURULProtocol拦截请求，在自定义的NSURULProtocol调用httdns模块处理域名的切换。其中存在的WKWebView 无法使用 NSURLProtocol 拦截请求的问题，可以使用私用的api进行处理
+
+```
+    //注册自己的protocol
+    [NSURLProtocol registerClass:[CustomProtocol class]];
+    //创建WKWebview
+    WKWebViewConfiguration * config = [[WKWebViewConfiguration alloc] init];
+    WKWebView * wkWebView = [[WKWebView alloc] initWithFrame:CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.height) configuration:config];
+    [wkWebView loadRequest:webViewReq];
+    [self.view addSubview:wkWebView];
+    //注册scheme
+    Class cls = NSClassFromString(@"WKBrowsingContextController");
+    SEL sel = NSSelectorFromString(@"registerSchemeForCustomProtocol:");
+    if ([cls respondsToSelector:sel]) {
+        // 通过http和https的请求，同理可通过其他的Scheme 但是要满足ULR Loading System
+        [cls performSelector:sel withObject:@"http"];
+        [cls performSelector:sel withObject:@"https"];
+    }
+    
+```
+
+> 注:以上则为简单试的接入方式，接入方需要单独的处理SNI（单ip多证书）场景和webview场景存在的问题。
+
+### 2.2 一键式的接入方式
+* 调用 ` [PhotonHTTPDNSClient startEnableAutoRequest] `开启httpdns模块的urlportocol请求的拦截操作处理接入逻辑。
+>注:此方式的接入，只适用于基于iOS SDK自带的网库库(NSURLSession NSURLConnection)，其他的网络库需要使用第一种方式
+
+接入代码如下:
+
+```
+ // 可配置那些域名支持自动接入Httpdns的方式，其调用在startEnableAutoRequest之前
+ NSSet *filter = [NSSet setWithObjects:@"img.momoc.com", nil];
+ [PhotonHTTPDNSClient setRequestDomainFilter:filter];
+ // 可配置那些域名支持自动接入Httpdns的方式，其调用在startEnableAutoRequest之前
+ [PhotonHTTPDNSClient supportWKWebview];
+ 
+ [PhotonHTTPDNSClient startEnableAutoRequest];
+
+```
+仅以上代码部分，不需再接入其他任何额外的代码
+
+
+
+
+
+
+
+
+
+
+ 

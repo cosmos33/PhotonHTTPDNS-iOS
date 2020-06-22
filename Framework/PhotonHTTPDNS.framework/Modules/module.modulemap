@@ -1,0 +1,6 @@
+framework module PhotonHTTPDNS {
+  umbrella header "PhotonHTTPDNS.h"
+
+  export *
+  module * { export * }
+}
