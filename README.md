@@ -3,17 +3,10 @@
 解决iOS客户端使用HTTPDNS时的痛点，完美处理了sni，web场景使用nsnsurlsession不能处理的问题。一键接入，全面体验方便高效的HTTPDNS带来的防劫持，调度以及网络访问性能的提升。
 
 ## 导入HTTPDNS库
-进到 https://git.wemomo.com/module/MDDNS-iOS.git 仓库下，切到dev分支
-获取MDHTTPDNS.framework库，并引用到自己的项目中，如仓库中的MDHTTPDNSDemo所示
 
-![屏幕快照 20190508 下午3.51.41.png](/attach/5cd28aa45b018.png)
+### cocoapods依赖:（推荐使用）
 
-
-## cocoapods依赖:（推荐使用）
-最新版本:3.0.2 release环境编译问题处理
-最新版本:3.0.1 字符相关的crash,release环境编译
-
-添加source
+添加source:
 source 'https://github.com/cosmos33/MMSpecs'
 
 pod 'PhotonHTTPDNS','~>1.0.0'
