@@ -97,7 +97,7 @@ MDDNSConfig.m
 ```
 
 **使用PhotonHTTPDNSConfig初始化SDK**
-* 1 单实例初始化：
+
 ```
  PhotonHTTPDNSConfig *config = [[PhotonHTTPDNSConfig alloc] init];
  [PhotonHTTPDNSClient initHTTPDNSWithConfig:config];
