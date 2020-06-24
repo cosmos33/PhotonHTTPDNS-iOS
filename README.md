@@ -20,7 +20,15 @@ pod 'openssl-lib', '~>1.0.1'
 
 在[Build Phases]->[Link Binary With Libraries]中添加libc++。
 
-##  代码接入
+## HTTPDNS库代码接入
+
+HTTPDNS库的接入分为两种：
+
+* 一种是单实例模式。这种适用的维度整个APP，HTTPDNS的生命周期和整个app的声明周期一致。支持两种使用方式。直接获取解析ip的使用的方式和一键式的使用的方式。具体请看单实例代码接入。
+
+* 一种是可创建多实例的使用方式。这种适用的维度是APP中依赖的单个SDK，SDK内部自己使用HTTPDNS功能。创建的HTTPDNS实例的声明周期和SDK的声明周期一致。仅支持直接获取解析ip的使用方式。具体请看多实例代码接入。
+
+##  单实例代码接入。
 
 ### 1.初始化
 > 实现`MDDNSConfigProtocol`协议方法，配置好`MDDNSConfig`代码如下
@@ -88,7 +96,7 @@ MDDNSConfig.m
 
 ```
 
-> 使用PhotonHTTPDNSConfig初始化SDK
+**使用PhotonHTTPDNSConfig初始化SDK**
 
 ```
  PhotonHTTPDNSConfig *config = [[PhotonHTTPDNSConfig alloc] init];
@@ -100,10 +108,12 @@ MDDNSConfig.m
 #else
 [PhotonHTTPDNSClient shouldConsolLog:NO];
 
-
 ```
+
 ### 2.使用方式
+
 #### 2.1 直接式的使用方式
+
 >注: 此种使用方式需要接入方处理的事务比较多，比如(SNI场景和wkwebview)的接入，但是灵活性比较高
 
 * 在请求之前调用 `[PhotonHTTPDNSClient getIPbyHost:host]`获取host解析后得到的ip。
@@ -116,7 +126,6 @@ MDDNSConfig.m
 示例代码如下:
 
 ```
-
     // 业务层最原始的请求
     NSString *originUrl = _textfield.text;
     // 通过HTTPDNS获取IP成功，进行URL替换和HOST头设置
@@ -195,6 +204,145 @@ MDDNSConfig.m
 
 ```
 仅以上代码部分，不需再接入其他任何额外的代码
+
+
+
+##  多实例代码接入
+
+### 1.初始化
+> 实现`MDDNSConfigProtocol`协议方法，配置好`MDDNSConfig`代码如下
+
+```
+MDDNSConfig.h
+@interface PhotonHTTPDNSConfig : NSObject<PhotonHTTPDNSConfigProtocol>
+
+@end
+
+MDDNSConfig.m
+@implementation MDDNSConfig
+// appid
+- (NSString *)getAppid{
+    return @"2bd1a15c553de0a9df6dcede9af22962";
+}
+
+- (NSString *)getAppVersion{
+    return @"1438";
+}
+
+- (NSString *)getOsType{
+    return @"iOS";
+}
+
+- (NSString *)getUseragent{
+    return @"MomoChat/9.0 ios/1471 (iPhone 8; iOS 12.1.2; zh_CN; iPhone10,1; S1)";
+}
+// 获取全局的域名配置，有则设置
+- (NSString *)getHttpDNSGlobalConfigs{
+    return @"";
+}
+// 获取当前的用户id
+- (NSString *)getUserid{
+    return @"12345";
+}
+
+// 获取当前的用户id
+- (double)getLng{
+    return 0.0f;
+}
+
+// 获取当前的用户id
+- (double)getLat{
+    return 32.43f;
+}
+
+// 指定预先解析的域名
+- (nonnull NSArray<NSString *> *)getPreResolveHosts {
+    return @[@"immomo.com"];
+}
+
+@end
+
+// 获取当前的用户id
+- (double)getLng{
+    return 23.43f;
+}
+
+// 获取当前的用户id
+- (double)getLat{
+    return 32.43f;
+}
+@end
+
+```
+
+**使用PhotonHTTPDNSConfig初始化SDK**
+
+* 初始化：
+
+```
+ PhotonHTTPDNSConfig *config = [[PhotonHTTPDNSConfig alloc] init];
+PhotonHTTPDNSClient *client = [[PhotonHTTPDNSClient alloc] initHTTPDNSWithConfig:config];
+ // 打开底层log 日志，用于排查问题，默认是关闭
+#ifdef DEBUG
+[client shouldConsolLog:YES];
+#else
+[client shouldConsolLog:NO];
+
+```
+
+### 2.使用方式
+
+>注: 此种使用方式需要接入方处理的事务比较多，比如(SNI场景和wkwebview)的接入，但是灵活性比较高
+
+* 在请求之前调用 `[client getIPbyHost:host]`获取host解析后得到的ip。
+
+* 请求成功调用 `[client requestSucceedForDomain:host andSucceedDomain:usedIp andSuccessedPort:0];
+        }`
+
+* 请求失败调用 `[client requestFailedForDomain:host andFailedDomain:usedIp andFailedPort:0]`
+
+示例代码如下:
+
+```
+
+ MDDNSConfig *config = [[MDDNSConfig alloc] init];
+ _client = [[PhotonHTTPDNSClient alloc] initHTTPDNSWithConfig:config];
+
+```
+
+```
+   NSString *originUrl = @"https://example.immomo.com/example";
+    NSURLComponents *com = [[NSURLComponents alloc] initWithString:originUrl];
+    NSString *host = com.host;
+    NSString *usedIp = [_client getIPbyHost:host];
+    com.host = usedIp;
+    NSURL *newURL = [NSURL URLWithString:originUrl];
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration defaultSessionConfiguration]
+     delegate:self delegateQueue:nil];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:newURL];
+    request.timeoutInterval = 30;
+    if ([usedIp isEqualToString:host]) {
+        [request addValue:host forHTTPHeaderField:@"Host"];
+    }
+    
+    NSURLSessionDataTask * dataTask =  [session dataTaskWithRequest:request completionHandler:^(NSData * __nullable data, NSURLResponse * __nullable response, NSError * __nullable error) {
+        if (error) {
+            [self.client requestFailedForDomain:host andFailedDomain:usedIp andFailedPort:0];
+        }else{
+            [self.client requestSucceedForDomain:host andSucceedDomain:usedIp andSuccessedPort:0];
+        }
+
+    }];
+    [dataTask resume];
+
+```
+
+
+
+
+
+
+ 
 
 
 
