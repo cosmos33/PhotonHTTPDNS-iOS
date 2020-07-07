@@ -197,7 +197,7 @@ MDDNSConfig.m
  // 可配置那些域名支持自动接入Httpdns的方式，其调用在startEnableAutoRequest之前
  NSSet *filter = [NSSet setWithObjects:@"img.momoc.com", nil];
  [PhotonHTTPDNSClient setRequestDomainFilter:filter];
- // 可配置那些域名支持自动接入Httpdns的方式，其调用在startEnableAutoRequest之前
+ // 开启支持WKWebview
  [PhotonHTTPDNSClient supportWKWebview];
  
  [PhotonHTTPDNSClient startEnableAutoRequest];
