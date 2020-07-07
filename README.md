@@ -200,6 +200,7 @@ MDDNSConfig.m
  // 开启支持WKWebview
  [PhotonHTTPDNSClient supportWKWebview];
  
+ // 确保此方法在客户端内的请求发出之前调用
  [PhotonHTTPDNSClient startEnableAutoRequest];
 
 ```
