@@ -28,15 +28,6 @@ NS_ASSUME_NONNULL_BEGIN
 */
 + (void)setRequestDomainFilter:(nullable NSSet *)domainList;
 
-
-/// 是否支持WKWebview的处理，在startAutoRequest之前调用.整个app声明周期内仅调用一次
-+ (void)supportWKWebview;
-
-/// 开启自动请求。整个app声明周期内仅调用一次，开启后在整合app声明周期内不可停止
-+ (void)startEnableAutoRequest;
-
-
-+ (BOOL)autoEnableHTTPDNS;
 /**
  获取可用的连接host
 

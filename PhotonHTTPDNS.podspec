@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'PhotonHTTPDNS'
-  s.version          = '1.0.0'
+  s.version          = '1.0.2'
   s.summary          = 'A short description of PhotonHTTPDNS'
 
   s.description      = <<-DESC
@@ -17,5 +17,5 @@ TODO: Add long description of the pod here.
   s.frameworks = 'Foundation'
   s.ios.libraries = 'c++','stdc++','resolv'
   s.resources = 'Framework/PhotonDNSSource.bundle'
-  s.vendored_frameworks = 'Framework/PhotonHTTPDNS.framework','Framework/Cronet.framework'
+  s.vendored_frameworks = 'Framework/PhotonHTTPDNS.framework'
 end
