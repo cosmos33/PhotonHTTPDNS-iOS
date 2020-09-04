@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
-  s.name             = 'PhotonHTTPDNS'
-  s.version          = '1.0.0'
+  s.name             = 'PhotonHTTPDNS_Cronet'
+  s.version          = '1.0.2-cronet'
   s.summary          = 'A short description of PhotonHTTPDNS'
 
   s.description      = <<-DESC
