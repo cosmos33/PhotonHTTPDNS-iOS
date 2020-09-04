@@ -220,4 +220,12 @@ GRPC_SUPPORT_EXPORT
 + (void)setRequestCompletionBlock:(RequestCompletionBlock)block;
 
 + (void)setModifyRequestBlock:(ModifyRequestBlock)block;
+
+// 可指定探测的ip和port
++ (BOOL)IsIPv6Reachable:(int)ProbePeriodMs probIp:(NSString *)probIp probPort:(int)probPort;
+
+// 使用m内嵌的ip和port
++ (BOOL)IsIPv6Reachable:(int)ProbePeriodMs;
+
++ (void)enableCertVerifierWithHosts:(NSArray<NSString *>*)hosts;
 @end
