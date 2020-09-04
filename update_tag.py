@@ -70,7 +70,7 @@ def writeNewTagToSpecFile(name,tag,am):
 # main方法
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='');
-    parser.add_argument('--name',type=str,default='PhotonHTTPDNS');
+    parser.add_argument('--name',type=str,default='PhotonHTTPDNS_Cronet');
     parser.add_argument('--tag',type=str,default=None);
     parser.add_argument('--am',type=str,default=None);
     args = parser.parse_args();
